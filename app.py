@@ -7,6 +7,13 @@ from utils.agents import (
     question_agent,
     report_agent
 )
+from utils.document_reader import (
+    extract_text_from_pdf,
+    extract_text_from_txt,
+    split_text_into_chunks
+)
+
+from utils.retriever import retrieve_relevant_chunks
 
 st.set_page_config(
     page_title="Multi-Agent Research Assistant",
@@ -139,6 +146,10 @@ def init_session_state():
 
     if "history" not in st.session_state:
         st.session_state.history = []
+    if "document_text" not in st.session_state:
+        st.session_state.document_text = ""
+    if "retrieved_context" not in st.session_state:
+        st.session_state.retrieved_context = ""    
 
 
 def reset_outputs():
@@ -298,7 +309,19 @@ with right_col:
     )
 
     st.markdown("### Day 2 Upgrade")
-    st.success("Today we added a cleaner dashboard, agent workflow tracker, progress bar, and research history.")
+uploaded_file = st.file_uploader(
+    "Upload PDF or TXT document for RAG",
+    type=["pdf", "txt"]
+)
+
+if uploaded_file:
+    if uploaded_file.name.endswith(".pdf"):
+        st.session_state.document_text = extract_text_from_pdf(uploaded_file)
+    else:
+        st.session_state.document_text = extract_text_from_txt(uploaded_file)
+
+st.success("Document uploaded and text extracted successfully.")
+st.write(f"Extracted words: {len(st.session_state.document_text.split())}")    st.success("Today we added a cleaner dashboard, agent workflow tracker, progress bar, and research history.")
 
 if run_button:
     if not topic.strip():

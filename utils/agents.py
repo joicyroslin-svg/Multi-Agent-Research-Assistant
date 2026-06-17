@@ -29,11 +29,7 @@ def ask_gemini(prompt):
 
     client = genai.Client(api_key=api_key)
 
-    models = [
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-1.5-flash"
-    ]
+    models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
 
     for model in models:
         try:
@@ -51,13 +47,20 @@ def ask_gemini(prompt):
     return "AI response failed. Please check your API key or internet connection."
 
 
-def research_agent(topic):
+def research_agent(topic, context=""):
     prompt = f"""
 You are a Research Agent.
 
-Explain this topic in simple language:
+Topic:
+{topic}
 
-Topic: {topic}
+Retrieved Document Context:
+{context}
+
+Task:
+Explain the topic using the retrieved document context.
+If the context is useful, base your answer on it.
+If the context is limited, explain using general knowledge and mention that document context was limited.
 
 Format:
 ## Topic Overview
@@ -65,7 +68,7 @@ Format:
 ## Real-World Applications
 ## Why It Is Important
 
-Keep it beginner-friendly and clear.
+Keep it beginner-friendly.
 """
     return ask_gemini(prompt)
 
@@ -125,7 +128,7 @@ Give 5 questions.
     return ask_gemini(prompt)
 
 
-def report_agent(topic, research_output, summary_output, notes_output, questions_output):
+def report_agent(topic, research_output, summary_output, notes_output, questions_output, context=""):
     prompt = f"""
 You are a Report Agent.
 
@@ -133,6 +136,9 @@ Create a final student-friendly research report.
 
 Topic:
 {topic}
+
+Retrieved Document Context:
+{context}
 
 Research:
 {research_output}
@@ -156,5 +162,7 @@ Format:
 ## Study Notes
 ## Practice Questions
 ## Conclusion
+
+Mention if uploaded document context was used.
 """
     return ask_gemini(prompt)
