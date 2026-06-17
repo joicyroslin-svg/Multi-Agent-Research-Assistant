@@ -13,7 +13,7 @@ from utils.document_reader import (
     split_text_into_chunks
 )
 
-from utils.retriever import retrieve_relevant_chunks
+from utils.retriever import retrieve_relevant_chunks, combine_retrieved_chunks
 
 st.set_page_config(
     page_title="Multi-Agent Research Assistant",
@@ -149,7 +149,9 @@ def init_session_state():
     if "document_text" not in st.session_state:
         st.session_state.document_text = ""
     if "retrieved_context" not in st.session_state:
-        st.session_state.retrieved_context = ""    
+        st.session_state.retrieved_context = ""
+    if "retrieved_chunks" not in st.session_state:
+        st.session_state.retrieved_chunks = []        
 
 
 def reset_outputs():
@@ -158,6 +160,8 @@ def reset_outputs():
     st.session_state.notes = ""
     st.session_state.questions = ""
     st.session_state.report = ""
+    st.session_state.retrieved_chunks = []
+    st.session_state.retrieved_context = ""
     st.session_state.workflow_status = {
         "Research Agent": "Waiting",
         "Summary Agent": "Waiting",
@@ -280,6 +284,20 @@ with left_col:
         placeholder="Example: Retrieval Augmented Generation"
     )
 
+    uploaded_file = st.file_uploader(
+        "Upload PDF or TXT document for RAG",
+        type=["pdf", "txt"]
+    )
+
+    if uploaded_file:
+        if uploaded_file.name.endswith(".pdf"):
+            st.session_state.document_text = extract_text_from_pdf(uploaded_file)
+        else:
+            st.session_state.document_text = extract_text_from_txt(uploaded_file)
+
+        st.success("Document uploaded and text extracted successfully.")
+        st.write(f"Extracted words: {len(st.session_state.document_text.split())}")
+
     run_button = st.button("Run Multi-Agent Research")
     clear_button = st.button("Clear Outputs")
 
@@ -309,19 +327,7 @@ with right_col:
     )
 
     st.markdown("### Day 2 Upgrade")
-uploaded_file = st.file_uploader(
-    "Upload PDF or TXT document for RAG",
-    type=["pdf", "txt"]
-)
-
-if uploaded_file:
-    if uploaded_file.name.endswith(".pdf"):
-        st.session_state.document_text = extract_text_from_pdf(uploaded_file)
-    else:
-        st.session_state.document_text = extract_text_from_txt(uploaded_file)
-
-st.success("Document uploaded and text extracted successfully.")
-st.write(f"Extracted words: {len(st.session_state.document_text.split())}")    st.success("Today we added a cleaner dashboard, agent workflow tracker, progress bar, and research history.")
+    st.success("Today we added a cleaner dashboard, agent workflow tracker, progress bar, and research history.")
 
 if run_button:
     if not topic.strip():
@@ -329,12 +335,25 @@ if run_button:
     else:
         reset_outputs()
 
+        context = ""
+
+        if st.session_state.document_text:
+            chunks = split_text_into_chunks(st.session_state.document_text)
+            retrieved_chunks = retrieve_relevant_chunks(topic, chunks, top_k=3)
+            context = combine_retrieved_chunks(retrieved_chunks)
+
+            st.session_state.retrieved_chunks = retrieved_chunks
+            st.session_state.retrieved_context = context
+        else:
+            st.session_state.retrieved_chunks = []
+            st.session_state.retrieved_context = "No document uploaded. Agents used topic-based GenAI only."
+
         if topic not in st.session_state.history:
             st.session_state.history.append(topic)
 
         st.session_state.workflow_status["Research Agent"] = "Running"
         with st.spinner("Research Agent is working..."):
-            st.session_state.research = research_agent(topic)
+            st.session_state.research = research_agent(topic, context)
         st.session_state.workflow_status["Research Agent"] = "Completed"
 
         st.session_state.workflow_status["Summary Agent"] = "Running"
@@ -359,7 +378,8 @@ if run_button:
                 st.session_state.research,
                 st.session_state.summary,
                 st.session_state.notes,
-                st.session_state.questions
+                st.session_state.questions,
+                context
             )
         st.session_state.workflow_status["Report Agent"] = "Completed"
 
@@ -370,12 +390,13 @@ st.markdown("---")
 
 st.markdown("## Agent Outputs")
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🔎 Research",
     "📝 Summary",
     "📚 Notes",
     "❓ Questions",
-    "📄 Final Report"
+    "📄 Final Report",
+    "📌 Retrieved Context"
 ])
 
 with tab1:
@@ -419,6 +440,18 @@ with tab5:
         )
     else:
         st.info("Final report will appear here.")
+
+with tab6:
+    st.markdown("### Retrieved RAG Context")
+
+    if st.session_state.retrieved_chunks:
+        for index, item in enumerate(st.session_state.retrieved_chunks, start=1):
+            with st.expander(f"Source Chunk {index} | Similarity Score: {item['score']}"):
+                st.write(item["chunk"])
+    elif st.session_state.retrieved_context:
+        st.info(st.session_state.retrieved_context)
+    else:
+        st.info("Retrieved document context will appear here.")
 
 st.markdown("---")
 
