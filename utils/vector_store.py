@@ -43,6 +43,14 @@ def get_gemini_client():
 
 def get_chromadb():
     try:
+        try:
+            import pysqlite3
+            import sys
+
+            sys.modules["sqlite3"] = pysqlite3
+        except Exception:
+            pass
+
         import chromadb
 
         return chromadb
