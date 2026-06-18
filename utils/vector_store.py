@@ -1,5 +1,6 @@
 import os
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import chromadb
 from dotenv import load_dotenv
@@ -107,8 +108,23 @@ def index_document_chunks(chunks):
     embeddings = []
     metadatas = []
 
-    for index, chunk in enumerate(chunks, start=1):
-        embedding = get_embedding(chunk)
+    def embed_chunk(index, chunk):
+        return index, chunk, get_embedding(chunk)
+
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = [
+            executor.submit(embed_chunk, index, chunk)
+            for index, chunk in enumerate(chunks, start=1)
+        ]
+
+        embedded_chunks = []
+
+        for future in as_completed(futures):
+            embedded_chunks.append(future.result())
+
+    embedded_chunks.sort(key=lambda item: item[0])
+
+    for index, chunk, embedding in embedded_chunks:
 
         if embedding is None:
             continue
