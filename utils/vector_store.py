@@ -1,4 +1,5 @@
 import os
+import tempfile
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -9,7 +10,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 load_dotenv()
 
-CHROMA_PATH = "chroma_db"
+CHROMA_PATH = os.path.join(tempfile.gettempdir(), "multi_agent_research_chroma_db")
 COLLECTION_NAME = "multi_agent_research_docs"
 FALLBACK_CHUNKS = []
 
@@ -108,10 +109,13 @@ def reset_vector_database():
     except Exception:
         pass
 
-    return client.get_or_create_collection(
-        name=COLLECTION_NAME,
-        metadata={"hnsw:space": "cosine"}
-    )
+    try:
+        return client.get_or_create_collection(
+            name=COLLECTION_NAME,
+            metadata={"hnsw:space": "cosine"}
+        )
+    except Exception:
+        return None
 
 
 def index_document_chunks(chunks):
