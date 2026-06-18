@@ -3,3 +3,5 @@ google-genai
 python-dotenv
 pdfplumber
 scikit-learn
+chromadb
+numpy
