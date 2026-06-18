@@ -203,6 +203,10 @@ Final Report: Generated successfully
 
 Built an advanced Agentic RAG Research Assistant using Gemini API, ChromaDB, vector embeddings, and Streamlit, featuring autonomous agent planning, document-based retrieval, source-grounded research generation, agent memory, confidence scoring, and a professional dashboard UI.
 
+## Live Demo
+
+[Try the App](https://multi-agent-research-assistant-ai.streamlit.app/)
+
 ## Author
 
 Joicy Roslin
